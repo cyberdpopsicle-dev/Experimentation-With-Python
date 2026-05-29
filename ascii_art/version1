@@ -1,0 +1,68 @@
+import cv2
+import numpy as np
+from google.colab import files
+
+ASCII = "@#S%?*+;:,."
+uploaded = files.upload()
+video_path = list(uploaded.keys())[0]
+cap = cv2.VideoCapture(video_path)
+WIDTH = 180
+HEIGHT = 70
+FONT = cv2.FONT_HERSHEY_SIMPLEX
+cv2.namedWindow(
+    "ASCII VIDEO",
+    cv2.WINDOW_NORMAL
+)
+while True:
+    ok, frame = cap.read()
+    if not ok:
+        break
+    gray = cv2.cvtColor(
+        frame,
+        cv2.COLOR_BGR2GRAY
+    )
+    resized = cv2.resize(
+        gray,
+        (
+            WIDTH,
+            HEIGHT
+        )
+    )
+    canvas = np.zeros(
+        (
+            HEIGHT * 12,
+            WIDTH * 10
+        ),
+        dtype=np.uint8
+    )
+    for y in range(HEIGHT):
+        for x in range(WIDTH):
+            pixel = resized[y, x]
+            index = int(
+                pixel / 255 * (len(ASCII) - 1)
+            )
+            char = ASCII[index]
+            cv2.putText(
+                canvas,
+                char,
+                (
+                    x * 10,
+                    y * 12
+                ),
+                FONT,
+                0.35,
+                255,
+                1,
+                cv2.LINE_AA
+            )
+    cv2.imshow(
+        "ASCII VIDEO",
+        canvas
+    )
+
+    if cv2.waitKey(1) & 0xFF == ord("q"):
+        break
+
+cap.release()
+
+cv2.destroyAllWindows()
