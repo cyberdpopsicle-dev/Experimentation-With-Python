@@ -1,0 +1,259 @@
+import cv2
+import mediapipe as mp
+import numpy as np
+import time
+
+cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+
+if not cap.isOpened():
+    print("Camera failed")
+    exit()
+
+cv2.namedWindow("Virtual Keyboard", cv2.WINDOW_NORMAL)
+
+mp_hands = mp.solutions.hands
+hands = mp_hands.Hands(
+    static_image_mode=False,
+    max_num_hands=1,
+    min_detection_confidence=0.7,
+    min_tracking_confidence=0.7
+)
+
+draw = mp.solutions.drawing_utils
+
+keys = [
+    ["Q","W","E","R","T","Y","U","I","O","P"],
+    ["A","S","D","F","G","H","J","K","L"],
+    ["Z","X","C","V","B","N","M"],
+    ["SPACE","BACK","SAVE"]
+]
+
+themes = [
+    {
+        "bg": (15,15,15),
+        "key": (45,45,45),
+        "hover": (255,0,255),
+        "click": (0,255,0),
+        "text": (255,255,255)
+    },
+    {
+        "bg": (255,255,255),
+        "key": (200,200,200),
+        "hover": (255,120,0),
+        "click": (0,255,255),
+        "text": (0,0,0)
+    },
+    {
+        "bg": (5,0,30),
+        "key": (255,120,0),
+        "hover": (0,255,255),
+        "click": (255,0,0),
+        "text": (255,255,255)
+    }
+]
+
+theme_index = 0
+typed_text = ""
+
+key_data = []
+
+start_x = 40
+start_y = 180
+key_w = 65
+key_h = 65
+gap = 10
+
+for r, row in enumerate(keys):
+
+    row_data = []
+
+    x = start_x + r * 20
+
+    for key in row:
+
+        width = 220 if key == "SPACE" else 120 if key in ["BACK","SAVE"] else key_w
+
+        row_data.append({
+            "key": key,
+            "x": x,
+            "y": start_y + r * (key_h + gap),
+            "w": width,
+            "h": key_h
+        })
+
+        x += width + gap
+
+    key_data.append(row_data)
+
+last_press = time.time()
+
+while True:
+
+    success, frame = cap.read()
+
+    if not success:
+        break
+
+    frame = cv2.flip(frame, 1)
+
+    theme = themes[theme_index]
+
+    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+    result = hands.process(rgb)
+
+    h_frame, w_frame, _ = frame.shape
+
+    cv2.rectangle(frame, (20,20), (1240,120), theme["key"], -1)
+
+    display_text = typed_text[-55:]
+
+    cv2.putText(
+        frame,
+        display_text,
+        (40,80),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        1,
+        theme["text"],
+        2
+    )
+
+    if result.multi_hand_landmarks:
+
+        for hand in result.multi_hand_landmarks:
+
+            draw.draw_landmarks(
+                frame,
+                hand,
+                mp_hands.HAND_CONNECTIONS
+            )
+
+            index_tip = hand.landmark[8]
+            thumb_tip = hand.landmark[4]
+
+            ix = int(index_tip.x * w_frame)
+            iy = int(index_tip.y * h_frame)
+
+            tx = int(thumb_tip.x * w_frame)
+            ty = int(thumb_tip.y * h_frame)
+
+            cv2.circle(frame, (ix, iy), 10, (255,255,255), -1)
+
+            distance = np.hypot(ix - tx, iy - ty)
+
+            for row in key_data:
+
+                for button in row:
+
+                    x = button["x"]
+                    y = button["y"]
+                    bw = button["w"]
+                    bh = button["h"]
+
+                    color = theme["key"]
+
+                    inside = x < ix < x + bw and y < iy < y + bh
+
+                    if inside:
+
+                        color = theme["hover"]
+
+                        if distance < 35:
+
+                            color = theme["click"]
+
+                            current = time.time()
+
+                            if current - last_press > 0.4:
+
+                                value = button["key"]
+
+                                if value == "SPACE":
+                                    typed_text += " "
+
+                                elif value == "BACK":
+                                    typed_text = typed_text[:-1]
+
+                                elif value == "SAVE":
+
+                                    with open(
+                                        "typed_text.txt",
+                                        "w",
+                                        encoding="utf-8"
+                                    ) as f:
+
+                                        f.write(typed_text)
+
+                                    print("Saved")
+
+                                else:
+                                    typed_text += value
+
+                                last_press = current
+
+                    cv2.rectangle(
+                        frame,
+                        (x,y),
+                        (x+bw,y+bh),
+                        color,
+                        -1
+                    )
+
+                    cv2.rectangle(
+                        frame,
+                        (x,y),
+                        (x+bw,y+bh),
+                        (255,255,255),
+                        2
+                    )
+
+                    font_scale = 0.7 if len(button["key"]) > 1 else 1
+
+                    cv2.putText(
+                        frame,
+                        button["key"],
+                        (x + 15, y + 42),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        font_scale,
+                        theme["text"],
+                        2
+                    )
+
+    cv2.putText(
+        frame,
+        "AI VIRTUAL KEYBOARD",
+        (35,150),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        1,
+        (255,255,255),
+        3
+    )
+
+    cv2.putText(
+        frame,
+        "1 2 3 = THEMES | Q = QUIT",
+        (35,520),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.7,
+        (255,255,255),
+        2
+    )
+
+    cv2.imshow("Virtual Keyboard", frame)
+
+    key = cv2.waitKey(1) & 0xFF
+
+    if key == ord("q"):
+        break
+
+    if key == ord("1"):
+        theme_index = 0
+
+    if key == ord("2"):
+        theme_index = 1
+
+    if key == ord("3"):
+        theme_index = 2
+
+cap.release()
+cv2.destroyAllWindows()
