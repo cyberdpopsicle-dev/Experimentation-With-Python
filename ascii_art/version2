@@ -1,0 +1,104 @@
+pip install opencv-python matplotlib numpy
+import cv2
+import numpy as np
+from tqdm import tqdm
+
+ASCII = "@%#*+=-:. "
+
+VIDEO = "/kaggle/input/datasets/cyberdustie/video/anime_output (1).mp4"
+
+OUTPUT = "ascii_output.mp4"
+
+WIDTH = 220
+HEIGHT = int(WIDTH * 0.42)
+
+FONT = cv2.FONT_HERSHEY_SIMPLEX
+
+cap = cv2.VideoCapture(VIDEO)
+
+fps = int(cap.get(cv2.CAP_PROP_FPS))
+
+frame_count = int(
+    cap.get(cv2.CAP_PROP_FRAME_COUNT)
+)
+
+OUT_W = WIDTH * 10
+OUT_H = HEIGHT * 12
+
+writer = cv2.VideoWriter(
+    OUTPUT,
+    cv2.VideoWriter_fourcc(*"mp4v"),
+    fps,
+    (
+        OUT_W,
+        OUT_H
+    ),
+    False
+)
+
+for _ in tqdm(range(frame_count)):
+
+    ok, frame = cap.read()
+
+    if not ok:
+        break
+
+    gray = cv2.cvtColor(
+        frame,
+        cv2.COLOR_BGR2GRAY
+    )
+
+    small = cv2.resize(
+        gray,
+        (
+            WIDTH,
+            HEIGHT
+        )
+    )
+
+    canvas = np.zeros(
+        (
+            OUT_H,
+            OUT_W
+        ),
+        dtype=np.uint8
+    )
+
+    for y in range(HEIGHT):
+
+        for x in range(WIDTH):
+
+            pixel = small[y, x]
+
+            idx = int(
+                pixel / 255 * (len(ASCII) - 1)
+            )
+
+            char = ASCII[idx]
+
+            cv2.putText(
+                canvas,
+                char,
+                (
+                    x * 10,
+                    y * 12
+                ),
+                FONT,
+                0.35,
+                255,
+                1,
+                cv2.LINE_AA
+            )
+    writer.write(canvas)
+
+cap.release()
+
+writer.release()
+
+print("DONE :", OUTPUT)
+from IPython.display import Video
+
+Video(
+    "ascii_output.mp4",
+    embed=True
+)
