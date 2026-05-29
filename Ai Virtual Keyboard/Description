@@ -1,0 +1,10 @@
+AI Virtual Keyboard using OpenCV and MediaPipe.
+A real-time gesture-controlled virtual keyboard that uses webcam hand tracking and pinch detection for typing without physical contact.
+Features:
+* Live hand tracking
+* Virtual keyboard UI
+* Gesture typing
+* Theme switching
+* Text saving
+* Backspace and space support
+Built with Python, OpenCV, MediaPipe, and NumPy.
