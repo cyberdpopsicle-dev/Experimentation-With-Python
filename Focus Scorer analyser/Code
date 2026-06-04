@@ -1,0 +1,66 @@
+import random
+import statistics
+from datetime import datetime, timedelta
+
+class FocusAnalyzer:
+    def __init__(self):
+        self.activity = []
+
+    def simulate_activity(self, hours=8):
+        start = datetime.now()
+
+        for minute in range(hours * 60):
+            timestamp = start + timedelta(minutes=minute)
+
+            # Simulated keystrokes per minute
+            keystrokes = random.randint(0, 120)
+
+            self.activity.append({
+                "time": timestamp,
+                "keystrokes": keystrokes
+            })
+
+    def calculate_focus_score(self):
+        scores = []
+
+        for record in self.activity:
+            k = record["keystrokes"]
+
+            if k < 10:
+                score = 20
+            elif k < 40:
+                score = 50
+            elif k < 80:
+                score = 80
+            else:
+                score = 100
+
+            scores.append(score)
+
+        return round(statistics.mean(scores), 2)
+
+    def report(self):
+        focus_score = self.calculate_focus_score()
+
+        print("=" * 40)
+        print("FOCUS ANALYSIS REPORT")
+        print("=" * 40)
+        print(f"Total Records : {len(self.activity)}")
+        print(f"Focus Score   : {focus_score}/100")
+
+        if focus_score >= 80:
+            print("Status        : Highly Productive")
+        elif focus_score >= 60:
+            print("Status        : Moderately Productive")
+        else:
+            print("Status        : Distracted")
+
+        print("=" * 40)
+
+
+if __name__ == "__main__":
+    analyzer = FocusAnalyzer()
+
+    analyzer.simulate_activity(hours=8)
+
+    analyzer.report()
