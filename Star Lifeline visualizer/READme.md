@@ -31,7 +31,3 @@ Enter:
 ## 📊 Output
 
 A unified dashboard displaying the star's evolutionary timeline, fusion history, and H-R diagram track.
-
-## 📄 License
-
-MIT License
