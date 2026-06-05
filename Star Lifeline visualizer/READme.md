@@ -1,4 +1,4 @@
-# 🌟 Stellar Lifeline Generator
+# 🌟 Stellar Lifeline Visualizer
 
 An interactive astrophysics simulator that models and visualizes a star's complete lifecycle based on user-defined properties.
 
@@ -17,8 +17,8 @@ pip install matplotlib seaborn numpy
 ## 🛠️ Usage
 
 ```bash
-git clone https://github.com/cyberdpopsicle-dev/stellar-lifeline-generator.git
-cd stellar-lifeline-generator
+git clone https://github.com/cyberdpopsicle-dev/Star Lifeline visualizer.git
+cd Star Lifeline visualizer
 python stellar_generator.py
 ```
 
