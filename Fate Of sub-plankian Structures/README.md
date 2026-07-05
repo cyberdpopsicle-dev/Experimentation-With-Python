@@ -7,4 +7,8 @@ As the simulation progresses, pay close attention to the center of the Wigner di
 What remains is a classical statistical mixture, illustrating the transition from quantum behavior to classical physics.
 This simulation highlights one of the fundamental challenges in quantum computing, quantum sensing, and quantum error correction: preserving quantum coherence long enough to perform meaningful computations or measurements. Understanding how quickly decoherence destroys these fragile quantum features is essential for designing more robust quantum technologies.
 The simulation video is attached below, along with the complete optimized Python implementation using QuTiP's open-system solver.
-# QuantumPhysics  QuantumComputing Decoherence OpenQuantumSystems QuantumMetrology WignerFunction ComputationalPhysics Python QuTiP Simulation
+---
+'''
+mermaid
+QuantumPhysics  QuantumComputing Decoherence OpenQuantumSystems QuantumMetrology WignerFunction ComputationalPhysics Python QuTiP Simulation
+'''
