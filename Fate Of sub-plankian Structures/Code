@@ -1,0 +1,59 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+from IPython.display import HTML
+from qutip import coherent, wigner, destroy, mesolve
+
+#  1. Simulation Setup & Phase Space Grid 
+N = 40                  # Hilbert space size (cutoff)
+alpha = 2.5             # Distance of coherent states from origin
+xvec = np.linspace(-6, 6, 200) # Grid resolution for Wigner calculation
+
+# 2. Construct the Initial Compass State (Density Matrix) 
+psi = (coherent(N, alpha) + coherent(N, -alpha) +
+       coherent(N, 1j*alpha) + coherent(N, -1j*alpha)).unit()
+rho0 = psi * psi.dag()  # Convert pure state vector to a density matrix
+
+#  3. Hamiltonian & Collapse Operators (Decoherence) 
+a = destroy(N)
+H = (a.dag()**2) * (a**2) # Kerr Hamiltonian
+
+# Define environmental interaction (photon dissipation)
+gamma = 0.15              # Decoherence / decay rate
+c_ops = [np.sqrt(gamma) * a] # Collapse operators list
+
+# Time steps for the animation
+dt = 0.02
+Nt = 120
+times = np.linspace(0, Nt * dt, Nt)
+
+#  4. Solve the Master Equation 
+# mesolve natively tracks how environment interaction degrades the quantum state
+result = mesolve(H, rho0, times, c_ops)
+
+#  5. Animation Frame Generation 
+fig, ax = plt.subplots(figsize=(7, 6))
+
+def update(frame):
+    ax.clear()
+
+    # Extract the pre-computed density matrix for the current frame
+    rho_t = result.states[frame]
+
+    # Calculate the Wigner function
+    W = wigner(rho_t, xvec, xvec)
+
+    # Plotting with a fixed scale to visibly see the amplitude fade during dissipation
+    cont = ax.contourf(xvec, xvec, W, 100, cmap='RdBu', vmin=-1/np.pi, vmax=1/np.pi)
+
+    ax.set_title(f"Decoherence in Phase Space | Frame: {frame}\nSub-Planckian Ripples Erasing Due to Environment", fontsize=11)
+    ax.set_xlabel('Position (q)', fontsize=10)
+    ax.set_ylabel('Momentum (p)', fontsize=10)
+    ax.grid(True, alpha=0.3)
+    return cont
+
+plt.close()
+
+#  6. Render Video Output 
+ani = animation.FuncAnimation(fig, update, frames=Nt, interval=50)
+HTML(ani.to_html5_video())
