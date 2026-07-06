@@ -1,0 +1,93 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+from IPython.display import HTML
+from qutip import basis, sigmax, sigmaz, mesolve
+
+# We define the time grid and the driving frequency for the Rabi oscillations
+omega = np.pi           # Rabi frequency (causes a full flip |0> -> |1> at t=1.0)
+t_max = 2.0             # Simulate two full cycles of unperturbed oscillation
+steps = 200
+times = np.linspace(0, t_max, steps)
+
+# Two-level system (qubit) initialized in the ground state |0>
+psi0 = basis(2, 0)
+rho0 = psi0 * psi0.dag() # Convert to density matrix format for master equation solver
+
+# Hamiltonian representing a coherent driving field
+H = 0.5 * omega * sigmax()
+
+# Ground state projector, defined once for efficiency
+ground_state_projector = basis(2,0) * basis(2,0).dag()
+
+# We simulate three regimes of continuous measurement (dephasing):
+# 1. No measurement (coherent evolution)
+# 2. Moderate measurement (damped oscillations)
+# 3. Strong measurement (Zeno freezing)
+gamma_values = [0.0, 2.0, 15.0]
+results = []
+
+for gamma in gamma_values:
+    # In the continuous Zeno effect, measurement is modeled via dephasing collapse operators.
+    # The collapse operator sqrt(gamma) * sigmaz() continuously destroys phase coherence,
+    # suppressing the transition between state |0> and |1>.
+    c_ops = [np.sqrt(gamma) * sigmaz()] if gamma > 0 else []
+
+    # Solve the Lindblad Master Equation, now also computing expectation values of e_ops
+    res = mesolve(H, rho0, times, c_ops, e_ops=[ground_state_projector])
+    results.append(res)
+
+fig, ax = plt.subplots(figsize=(7, 6))
+
+# Prepare lines and markers for the animation
+colors = ['#1f77b4', '#ff7f0e', '#2ca02c']
+labels = ['Coherent (Gamma = 0.0)', 'Damped (Gamma = 2.0)', 'Zeno Freezing (Gamma = 15.0)']
+lines = []
+points = []
+
+for i in range(len(gamma_values)):
+    line, = ax.plot([], [], label=labels[i], color=colors[i], lw=2)
+    point, = ax.plot([], [], marker='o', color=colors[i], ms=8)
+    lines.append(line)
+    points.append(point)
+
+# Configure plot boundaries and labels
+ax.set_xlim(0, t_max)
+ax.set_ylim(-0.05, 1.05)
+ax.set_xlabel('Time', fontsize=10)
+ax.set_ylabel('Ground State Population P(0)', fontsize=10)
+ax.grid(True, alpha=0.3)
+ax.legend(loc='lower left')
+
+def update(frame):
+    # Determine current time coordinate
+    current_time = times[frame]
+
+    # Update the title dynamically to show simulation progress
+    ax.set_title(f"The Quantum Zeno Effect | Time: {current_time:.2f}\nContinuous Measurement Freezing State Transition", fontsize=11)
+
+    for i, res in enumerate(results):
+        # Extract the pre-computed population of the ground state |0> up to the current frame
+        # res.expect[0] contains the expectation values for the first (and only) e_op
+        populations_full_trace = res.expect[0]
+        populations = populations_full_trace[:frame+1]
+
+        # Update line data
+        lines[i].set_data(times[:frame+1], populations)
+
+        # Update leading indicator dot
+        if len(populations) > 0:
+            points[i].set_data([current_time], [populations[-1]])
+
+    return lines + points
+
+plt.close()
+
+# Animate the transition step by step
+ani = animation.FuncAnimation(fig, update, frames=steps, interval=40, blit=True)
+HTML(ani.to_html5_video())
+
+
+
+# ```python
+ani.save('quantum_zeno_effect.mp4', writer='ffmpeg', fps=25)
