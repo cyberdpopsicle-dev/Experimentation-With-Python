@@ -1,0 +1,79 @@
+# Install/Import required modules
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+from scipy.sparse import diags
+from scipy.sparse.linalg import splu
+from IPython.display import HTML
+
+# --- 1. Simulation Parameters ---
+Nx = 500
+xmin, xmax = 0, 100
+x = np.linspace(xmin, xmax, Nx)
+dx = x[1] - x[0]
+dt = 0.05
+Nt = 400          # Increased frames so you can see it exit fully
+
+# --- 2. Initialize Potential Barrier (V) ---
+V = np.zeros(Nx)
+barrier_start = 45   # Moved slightly left
+barrier_width = 1.5  # MADE THINNER (Crucial for high transmission)
+barrier_height = 1.2 # MADE LOWER (Easier to tunnel through)
+
+for i in range(Nx):
+    if barrier_start <= x[i] <= (barrier_start + barrier_width):
+        V[i] = barrier_height
+
+# --- 3. Initialize Wave Packet (Psi) ---
+x0 = 20.0
+sigma = 4.0
+k0 = 1.4          # Slightly adjusted momentum
+
+psi = np.exp(-0.5 * ((x - x0) / sigma)**2) * np.exp(1j * k0 * x)
+psi /= np.sqrt(np.trapz(np.abs(psi)**2, x))
+
+# --- 4. Setup Crank-Nicolson Matrices ---
+diag_K = np.ones(Nx) / dx**2
+offdiag_K = -0.5 * np.ones(Nx - 1) / dx**2
+
+H_diag = diag_K + V
+H_offdiag = offdiag_K
+
+A_diag = 1.0 + 0.5j * dt * H_diag
+A_offdiag = 0.5j * dt * H_offdiag
+
+B_diag = 1.0 - 0.5j * dt * H_diag
+B_offdiag = -0.5j * dt * H_offdiag
+
+A_sparse = diags([A_offdiag, A_diag, A_offdiag], [-1, 0, 1], shape=(Nx, Nx), format='csc')
+B_sparse = diags([B_offdiag, B_diag, B_offdiag], [-1, 0, 1], shape=(Nx, Nx), format='csc')
+A_solver = splu(A_sparse)
+
+# --- 5. Animation Setup ---
+fig, ax = plt.subplots(figsize=(10, 5))
+ax.set_xlim(xmin, xmax)
+ax.set_ylim(-0.02, 0.25)
+ax.set_xlabel("Position (x)", fontsize=12)
+ax.set_ylabel("Probability Density $|\Psi|^2$", fontsize=12)
+ax.set_title("Quantum Tunneling Video Simulation", fontsize=14)
+
+ax.fill_between(x, 0, V * 0.05, color='gray', alpha=0.5, label='Potential Barrier (Scaled)')
+line, = ax.plot(x, np.abs(psi)**2, color='blue', lw=2, label='$|\Psi(x,t)|^2$')
+ax.legend(loc='upper right')
+
+# Explicitly close the initial figure to avoid a duplicate static plot rendering
+plt.close()
+
+# --- 6. Animation Loop ---
+def animate(frame):
+    global psi
+    b = B_sparse.dot(psi)
+    psi = A_solver.solve(b)
+    line.set_ydata(np.abs(psi)**2)
+    return line,
+
+# Generate the animation
+ani = animation.FuncAnimation(fig, animate, frames=Nt, interval=20, blit=True)
+
+# --- 7. Render as HTML5 Video in Colab ---
+HTML(ani.to_html5_video())
